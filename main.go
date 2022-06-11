@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strconv"
@@ -11,17 +13,40 @@ import (
 )
 
 type Log struct {
-	Message string  `csv:"Message"`
-	Power   float64 `csv:"Average power(Watts)"`
-	Time    float64 `csv:"time"`
+	Message   string  `csv:"Message"`
+	Power     float64 `csv:"Average power(Watts)"`
+	Time      float64 `csv:"time"`
+	Threshold int     `csv:"threshold"`
+	Frecuenzy int     `csv:"Frecuenzy"`
+	Energy    float64 `csv:"Energy"`
 }
 
 func main() {
-	file, err := os.OpenFile("fr-1.csv", os.O_RDWR|os.O_CREATE, os.ModePerm)
+	args := os.Args
+
+	if len(args) < 2 {
+		fmt.Println("Input file is missing.")
+		os.Exit(1)
+	}
+	filePath := args[1]
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, os.ModePerm)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
+
+	gocsv.SetCSVWriter(func(out io.Writer) *gocsv.SafeCSVWriter {
+		writer := csv.NewWriter(out)
+		writer.Comma = ' '
+		return gocsv.NewSafeCSVWriter(writer)
+	})
+
+	gocsv.SetCSVReader(func(out io.Reader) gocsv.CSVReader {
+		reader := csv.NewReader(out)
+		reader.Comma = ';'
+		return reader
+
+	})
 
 	logs := []*Log{}
 
@@ -31,6 +56,7 @@ func main() {
 	logsRealPower := []*Log{}
 	for i, log := range logs {
 		if log.Message != "idle" {
+
 			newRealLog := &Log{Message: log.Message, Power: log.Power - logs[i-1].Power, Time: log.Time}
 
 			logsRealPower = append(logsRealPower, newRealLog)
@@ -43,7 +69,15 @@ func main() {
 	}
 	logsAverageRealPower := []*Log{}
 	for k, v := range m {
-		logsAverageRealPower = append(logsAverageRealPower, calcAverage(v, k))
+
+		log := calcAverage(v, k)
+		msg := log.Message
+		frz, _ := strconv.Atoi(strings.Split(msg, "-")[0])
+		th, _ := strconv.Atoi(strings.Split(msg, "-")[2])
+		log.Threshold = th
+		log.Frecuenzy = frz
+		log.Energy = log.Time * log.Power
+		logsAverageRealPower = append(logsAverageRealPower, log)
 	}
 	sort.Slice(logsAverageRealPower, func(i, j int) bool {
 		msgi := logsAverageRealPower[i].Message
@@ -57,8 +91,22 @@ func main() {
 
 	})
 	csvContent, err := gocsv.MarshalString(&logsAverageRealPower)
-	fmt.Println(csvContent)
-	// Display all clients as CSV string
+	writeFile(csvContent, "fr-"+filePath)
+	sort.Slice(logsAverageRealPower, func(i, j int) bool {
+		msgi := logsAverageRealPower[i].Message
+		msgj := logsAverageRealPower[j].Message
+		frzi, _ := strconv.Atoi(strings.Split(msgi, "-")[0])
+		frzj, _ := strconv.Atoi(strings.Split(msgj, "-")[0])
+		erri, _ := strconv.Atoi(strings.Split(msgi, "-")[2])
+		errj, _ := strconv.Atoi(strings.Split(msgj, "-")[2])
+
+		return (erri == errj && frzi < frzj) || erri < errj
+
+	})
+
+	csvContent, err = gocsv.MarshalString(&logsAverageRealPower)
+
+	writeFile(csvContent, "th-"+filePath)
 
 }
 
@@ -76,5 +124,23 @@ func calcAverage(logs []Log, m string) *Log {
 		Power:   pwr / len,
 		Time:    time / len,
 	}
+
+}
+
+func writeFile(data, outputFile string) error {
+	f, err := os.Create("means-" + outputFile)
+
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	_, err2 := f.WriteString(data)
+
+	if err2 != nil {
+		return err2
+	}
+	return nil
 
 }

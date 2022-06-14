@@ -54,13 +54,18 @@ func main() {
 		panic(err)
 	}
 	logsRealPower := []*Log{}
-	for i, log := range logs {
-		if log.Message != "idle" {
+	for _, log := range logs {
+
+		if log.Message == "idle" {
+			continue
+		}
+		logsRealPower = append(logsRealPower, log)
+		/*if log.Message != "idle" {
 
 			newRealLog := &Log{Message: log.Message, Power: log.Power - logs[i-1].Power, Time: log.Time}
 
 			logsRealPower = append(logsRealPower, newRealLog)
-		}
+		}*/
 	}
 	m := make(map[string][]Log)
 	for _, log := range logsRealPower {

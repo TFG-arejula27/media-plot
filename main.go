@@ -113,6 +113,26 @@ func main() {
 
 	writeFile(csvContent, "th-"+filePath)
 
+	mtx := createMatrix(logsAverageRealPower)
+	matrixContentfile := matrixToString(*mtx)
+	writeFile(matrixContentfile, "plot-"+filePath)
+
+}
+
+func matrixToString(mtx [][]float64) string {
+
+	content := ""
+	for i := 0; i < len(mtx); i++ {
+		fr := 0.8 + float64(i)*0.1
+
+		content += strconv.FormatFloat(fr, 'f', 4, 64) + " " + " "
+
+		for j := 0; j < len(mtx[0]); j++ {
+			content += strconv.FormatFloat(mtx[i][j], 'f', 4, 64) + " "
+		}
+		content += "\n"
+	}
+	return content
 }
 
 func calcAverage(logs []Log, m string) *Log {
@@ -148,4 +168,76 @@ func writeFile(data, outputFile string) error {
 	}
 	return nil
 
+}
+
+func createMatrix(data []*Log) *[][]float64 {
+
+	freqInterval := getFreqInterval(data)
+	numFrequencies := len(freqInterval)
+	thresholdInterval := getThresholdInterval(data)
+	numThreshold := len(thresholdInterval)
+
+	matrix := make([][]float64, numFrequencies)
+	for i := 0; i < numFrequencies; i++ {
+		matrix[i] = make([]float64, numThreshold)
+	}
+
+	for _, v := range data {
+		fr := freqInterval[v.Frecuenzy]
+		th := thresholdInterval[v.Threshold]
+		matrix[fr][th] = v.Energy
+	}
+
+	return &matrix
+
+}
+
+func valueOnSlice(v int, s []int) bool {
+	for _, e := range s {
+		if v == e {
+			return true
+		}
+	}
+	return false
+}
+
+func generatePositionMap(values []int) map[int]int {
+
+	sort.Slice(values, func(i, j int) bool {
+		return values[i] < values[j]
+	})
+	res := make(map[int]int)
+	for i, v := range values {
+		res[v] = i
+	}
+
+	return res
+
+}
+
+func getFreqInterval(data []*Log) map[int]int {
+	values := []int{}
+
+	for _, l := range data {
+		if !valueOnSlice(l.Frecuenzy, values) {
+			values = append(values, l.Frecuenzy)
+
+		}
+
+	}
+	return generatePositionMap(values)
+
+}
+
+func getThresholdInterval(data []*Log) map[int]int {
+	values := []int{}
+	for _, l := range data {
+		if !valueOnSlice(l.Threshold, values) {
+			values = append(values, l.Threshold)
+
+		}
+
+	}
+
+	return generatePositionMap(values)
 }

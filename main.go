@@ -21,6 +21,8 @@ type Log struct {
 	Energy    float64 `csv:"Energy"`
 }
 
+var ocupacion int
+
 func main() {
 	args := os.Args
 
@@ -29,6 +31,12 @@ func main() {
 		os.Exit(1)
 	}
 	filePath := args[1]
+	var err error
+	strings.Split(filePath, "-")
+	ocupacion, err = strconv.Atoi(strings.Split(filePath, "-")[0])
+	if err != nil {
+		panic(err)
+	}
 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, os.ModePerm)
 	if err != nil {
 		panic(err)
@@ -115,8 +123,15 @@ func main() {
 
 	mtx := createMatrix(logsAverageRealPower)
 	matrixContentfile := matrixToString(*mtx)
-	writeFile(matrixContentfile, "plot-"+filePath)
+	writeFile(matrixContentfile, "plot-power-"+filePath)
 
+	mtxP := createMatrixPower(logsAverageRealPower)
+	matrixPContentfile := matrixToString(*mtxP)
+	writeFile(matrixPContentfile, "plot-power-"+filePath)
+
+	mtxT := createMatrixThrogput(logsAverageRealPower)
+	matrixTContentfile := matrixToString(*mtxT)
+	writeFile(matrixTContentfile, "plot-throgput-"+filePath)
 }
 
 func matrixToString(mtx [][]float64) string {
@@ -186,6 +201,50 @@ func createMatrix(data []*Log) *[][]float64 {
 		fr := freqInterval[v.Frecuenzy]
 		th := thresholdInterval[v.Threshold]
 		matrix[fr][th] = v.Energy
+	}
+
+	return &matrix
+
+}
+
+func createMatrixPower(data []*Log) *[][]float64 {
+
+	freqInterval := getFreqInterval(data)
+	numFrequencies := len(freqInterval)
+	thresholdInterval := getThresholdInterval(data)
+	numThreshold := len(thresholdInterval)
+
+	matrix := make([][]float64, numFrequencies)
+	for i := 0; i < numFrequencies; i++ {
+		matrix[i] = make([]float64, numThreshold)
+	}
+
+	for _, v := range data {
+		fr := freqInterval[v.Frecuenzy]
+		th := thresholdInterval[v.Threshold]
+		matrix[fr][th] = v.Power
+	}
+
+	return &matrix
+
+}
+
+func createMatrixThrogput(data []*Log) *[][]float64 {
+
+	freqInterval := getFreqInterval(data)
+	numFrequencies := len(freqInterval)
+	thresholdInterval := getThresholdInterval(data)
+	numThreshold := len(thresholdInterval)
+
+	matrix := make([][]float64, numFrequencies)
+	for i := 0; i < numFrequencies; i++ {
+		matrix[i] = make([]float64, numThreshold)
+	}
+
+	for _, v := range data {
+		fr := freqInterval[v.Frecuenzy]
+		th := thresholdInterval[v.Threshold]
+		matrix[fr][th] = float64(ocupacion) / v.Time
 	}
 
 	return &matrix

@@ -123,15 +123,15 @@ func main() {
 
 	mtx := createMatrix(logsAverageRealPower)
 	matrixContentfile := matrixToString(*mtx)
-	writeFile(matrixContentfile, "plot-power-"+filePath)
+	writeFile(matrixContentfile, "plot-energy-"+strconv.Itoa(ocupacion)+".dat")
 
 	mtxP := createMatrixPower(logsAverageRealPower)
 	matrixPContentfile := matrixToString(*mtxP)
-	writeFile(matrixPContentfile, "plot-power-"+filePath)
+	writeFile(matrixPContentfile, "plot-power-"+strconv.Itoa(ocupacion)+".dat")
 
 	mtxT := createMatrixThrogput(logsAverageRealPower)
 	matrixTContentfile := matrixToString(*mtxT)
-	writeFile(matrixTContentfile, "plot-throgput-"+filePath)
+	writeFile(matrixTContentfile, "plot-throgput-"+strconv.Itoa(ocupacion)+".dat")
 }
 
 func matrixToString(mtx [][]float64) string {
@@ -168,7 +168,7 @@ func calcAverage(logs []Log, m string) *Log {
 }
 
 func writeFile(data, outputFile string) error {
-	f, err := os.Create("means-" + outputFile)
+	f, err := os.Create(outputFile)
 
 	if err != nil {
 		return err
